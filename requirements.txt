@@ -1,0 +1,7 @@
+streamlit>=1.45
+GitPython>=3.1.44
+PyYAML>=6.0.2
+plantuml>=0.3
+together>=1.5.5
+json5>=0.12
+pillow>=11.2.1
