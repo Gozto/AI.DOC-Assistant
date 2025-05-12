@@ -346,7 +346,8 @@ Use these guidelines to map signals to architecture patterns (analyze in this or
 CAUTION: CAUTION: If the project is primarily a library or framework (e.g. Pandas, FastAPI), label it as 
 “Library/Framework” and do not classify it as a deployable Client–Server or Microservices application—rather, 
 choose an appropriate internal architecture pattern (e.g. Layered, Modular Monolith) based on its module structure and 
-dependencies.
+dependencies. You must also choose its internal architecture pattern. (e.g. Library/Framework with Modular Monolith
+internal architecture pattern)
 
 
 Key decision principles:

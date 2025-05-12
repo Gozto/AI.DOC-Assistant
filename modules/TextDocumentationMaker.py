@@ -379,22 +379,14 @@ PROHIBITIONS:
             f"- Tried: **{total_classes}**\n"
         )
 
-        # 4) dependencies
-        deps = CodeAnalyzer.get_class_dependencies(files)
-        deps_lines = []
-        for cls in sorted(deps):
-            targets = sorted(deps[cls])
-            deps_lines.append(f"- **{cls}** → {', '.join(targets) if targets else 'žiadne'}")
-        deps_section = "\n".join(deps_lines)
-
-        # 5) entrypointy
+        # 4) entrypointy
         entrypoints = []
         for fname in ("__main__.py", "cli.py", "manage.py"):
             if os.path.isfile(os.path.join(repo_root, fname)):
                 entrypoints.append(fname)
         entry_section = ", ".join(entrypoints) or "Žiadne entrypoint skripty"
 
-        # 6) license
+        # 5) license
         lic = "Žiadny LICENSE súbor"
         for f in ("LICENSE", "LICENSE.txt"):
             path = os.path.join(repo_root, f)
@@ -403,7 +395,9 @@ PROHIBITIONS:
                 break
 
         prompt = f"""
-You are an AI assistant for generating a README for a Python project.
+You are an AI assistant specialized in writing clear, user-friendly README files for Python projects.
+Using the information below, generate a well-structured README.md in Slovak, formatted in Markdown. 
+Make it easy to read and give a concise overview of what the project is, what is it used for and how to start with it.
 
 ## pyproject.toml content:
 {pyproject_content or 'No pyproject.toml found.'}
@@ -414,21 +408,11 @@ You are an AI assistant for generating a README for a Python project.
 ## Code metrics
 {metrics}
 
-## External dependencies
-{deps_section}
-
 ## Entrypoint scripts
 {entry_section}
 
 ## License
 {lic}
-
-Based on the information above, generate a README.md in Slovak, formatted in Markdown, with the following sections:
-1) Popis projektu  
-2) Inštalácia  
-3) Použitie  
-4) Štruktúra projektu
-5) Licencia
 """
 
         max_out = self._get_allowed_output(prompt)
