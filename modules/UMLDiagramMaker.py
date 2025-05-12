@@ -1,7 +1,8 @@
+import ast
 import logging
 import os
 import re
-import ast
+from concurrent.futures import ThreadPoolExecutor, as_completed
 
 from plantuml import PlantUML
 
@@ -107,16 +108,24 @@ Python Class Code:
 
     def generate_class_relationships_for_whole_class(self, class_code: str, class_name: str) -> dict:
         """
-        Rozdelí kód celej triedy na segmenty, analyzuje každý segment a skombinuje
-        zistené vzťahy tejto triedy k ostatným triedam v projekte.
+        Rozdelí kód celej triedy na segmenty, paralelne ich analyzuje a
+        skombinuje zistené vzťahy tejto triedy k ostatným triedam v projekte.
         """
         segments = CodeAnalyzer.split_class_code_for_diagrams(class_code, max_lines=650)
         files_dict = self.reader.read_files()
-        combined_result = {}
-        for seg in segments:
-            result = self.generate_class_relationships_for_one_segment(seg, files_dict, class_name)
-            combined_result.update(result)
-        return combined_result
+
+        combined: dict[str, str] = {}
+        with ThreadPoolExecutor(max_workers=min(5, len(segments))) as pool:
+            futures = {pool.submit(self.generate_class_relationships_for_one_segment, seg, files_dict, class_name): seg
+                       for seg in segments}
+            for fut in as_completed(futures):
+                try:
+                    result = fut.result()
+                    combined.update(result)
+                except Exception as e:
+                    self.logger.error(f"Segment failed: {e}")
+
+        return combined
 
     def generate_plantuml_for_class_diagram(self, class_info: dict, relationships: dict) -> str:
         """
@@ -307,20 +316,15 @@ Generate only PlantUML code starting with @startuml and ending with @enduml, not
                         if not isinstance(stmt, ast.Assign):
                             continue
                         for tgt in stmt.targets:
-                            if (
-                                    isinstance(tgt, ast.Attribute)
-                                    and isinstance(tgt.value, ast.Name)
-                                    and tgt.value.id == "self"
-                                    and isinstance(stmt.value, ast.Call)
-                            ):
+                            if (isinstance(tgt, ast.Attribute) and isinstance(tgt.value,
+                                                                              ast.Name) and tgt.value.id == "self" and isinstance(
+                                stmt.value, ast.Call)):
                                 # konstruktor priamo
                                 if isinstance(stmt.value.func, ast.Name) and stmt.value.func.id == class_name:
                                     init_attrs.add(tgt.attr)
                                 # cez factory volanie
-                                if (
-                                        isinstance(stmt.value.func, ast.Attribute)
-                                        and class_name.lower() in stmt.value.func.attr.lower()
-                                ):
+                                if (isinstance(stmt.value.func,
+                                               ast.Attribute) and class_name.lower() in stmt.value.func.attr.lower()):
                                     init_attrs.add(tgt.attr)
 
                 param_objs: set[str] = set()
@@ -337,26 +341,18 @@ Generate only PlantUML code starting with @startuml and ending with @enduml, not
                         continue
                     caller_m = sub.name
                     for call in ast.walk(sub):  # type: ignore
-                        if (
-                                isinstance(call, ast.Call)
-                                and isinstance(call.func, ast.Attribute)
-                                and call.func.attr == method_name
-                        ):
+                        if (isinstance(call, ast.Call) and isinstance(call.func,
+                                                                      ast.Attribute) and call.func.attr == method_name):
                             obj = call.func.value
                             # ked self.xxx.method_name()
-                            if (
-                                    isinstance(obj, ast.Attribute)
-                                    and isinstance(obj.value, ast.Name)
-                                    and obj.value.id == "self"
-                                    and obj.attr in init_attrs
-                            ):
+                            if (isinstance(obj, ast.Attribute) and isinstance(obj.value,
+                                                                              ast.Name) and obj.value.id == "self" and obj.attr in init_attrs):
                                 callers.setdefault(caller_cls, set()).add(caller_m)
                             # ked param.method_name()
                             elif isinstance(obj, ast.Name) and obj.id in param_objs:
                                 callers.setdefault(caller_cls, set()).add(caller_m)
 
-        lines = ["@startuml",
-                 f"class {class_name} {{", f"    + {method_name}()", "}", ""]
+        lines = ["@startuml", f"class {class_name} {{", f"    + {method_name}()", "}", ""]
         for caller_cls, methods in callers.items():
             lines.append(f"class {caller_cls} {{")
             for m in methods:
@@ -369,10 +365,8 @@ Generate only PlantUML code starting with @startuml and ending with @enduml, not
 
         try:
             image_data = self.plantuml_client.processes(puml)
-            out_path = os.path.join(
-                self.output_dir,
-                f"method_dependency_{class_name}_{method_name}.{self.output_format}"
-            )
+            out_path = os.path.join(self.output_dir,
+                                    f"method_dependency_{class_name}_{method_name}.{self.output_format}")
             with open(out_path, "wb") as f:
                 f.write(image_data)
             self.logger.info(f"Method-dependency diagram generated to {out_path}")
