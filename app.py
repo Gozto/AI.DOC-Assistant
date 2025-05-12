@@ -84,7 +84,11 @@ doc_maker, arch_recognizer, important_finder, uml_maker = init_clients()
 
 # sidebar navigacia
 page = st.sidebar.radio("⚙️ Vyber nástroj",
-                        ["📄 Dokumentácia", "🔎 Dôležité triedy", "🏗️ Architektúra", "📊 UML Diagrams", ])
+                        ["📄 Dokumentácia",
+                         "📘 Generovať README",
+                         "🔎 Dôležité triedy",
+                         "🏗️ Architektúra",
+                         "📊 UML Diagrams"])
 
 # ----------------------------------------------------------------
 # Dokumentacia
@@ -183,7 +187,6 @@ elif page == "🏗️ Architektúra":
     st.title("🏗️ Rozpoznanie architektúry")
     st.write("Analyzujem projekt a identifikujem architektonický vzor…")
 
-    # NOVÉ: ovládacie prvky pre group_levels a max_modules
     group_levels = st.slider(
         "Úroveň zoskupenia modulov (adresárové segmenty)",
         min_value=1, max_value=8, value=1,
@@ -314,3 +317,30 @@ elif page == "🔎 Dôležité triedy":
 
         except Exception as e:
             st.error(f"Nepodarilo sa analyzovať triedy: {e}")
+# ----------------------------------------------------------------
+# README
+# ----------------------------------------------------------------
+elif page == "📘 Generovať README":
+    st.title("📘 Generovanie README.md")
+    st.write("README bude zahrňať štruktúru, metriky, závislosti tried, entrypointy a licenciu.")
+
+    if st.button("▶️ Generovať README"):
+        try:
+            target = Path(output_dir).expanduser().resolve()
+            target.mkdir(parents=True, exist_ok=True)
+            files = st.session_state.reader.read_files()
+            repo_root = st.session_state.repo_root
+
+            with st.spinner("Generujem README…"):
+                doc_maker.generate_readme(
+                    files=files,
+                    output_dir=str(target),
+                    repo_root=repo_root,
+                    readme_name="README.md"
+                )
+
+            st.success(f"✔️ README vygenerované do: {target/'README.md'}")
+            st.markdown("---")
+            st.markdown((target/'README.md').read_text(encoding='utf-8'))
+        except Exception as e:
+            st.error(f"Nepodarilo sa vygenerovať README: {e}")

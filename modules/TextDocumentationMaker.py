@@ -345,3 +345,96 @@ PROHIBITIONS:
         os.makedirs(output_dir, exist_ok=True)
         for file_path, content in files.items():
             self.process_file(file_path, content, output_dir)
+
+    def generate_readme(self, files: dict[str, str], output_dir: str, repo_root: str, readme_name: str = "README.md") \
+            -> None:
+        """
+        Vygeneruje README.md pre celý projekt na základe:
+         - popisu z pyproject.toml (ak existuje),
+         - súborov a štruktúry,
+         - kódových metrík,
+         - dependencies z requirements.txt,
+         - entrypoint skriptov,
+         - license súboru.
+        """
+        os.makedirs(output_dir, exist_ok=True)
+
+        # 1) pyproject.toml
+        pyproject_content = ""
+        pyproject_path = os.path.join(repo_root, "pyproject.toml")
+        if os.path.isfile(pyproject_path):
+            with open(pyproject_path, encoding="utf-8") as f:
+                pyproject_content = f.read()
+
+        # 2) subory
+        file_list = "\n".join(f"- `{os.path.relpath(p, repo_root)}`" for p in sorted(files))
+
+        # 3) kodove metriky
+        total_files = len(files)
+        total_lines = sum(content.count("\n") + 1 for content in files.values())
+        total_classes = sum(len(CodeAnalyzer.extract_classes_from_source(c)) for c in files.values())
+        metrics = (
+            f"- Python súborov: **{total_files}**\n"
+            f"- Riadkov kódu: **{total_lines}**\n"
+            f"- Tried: **{total_classes}**\n"
+        )
+
+        # 4) dependencies
+        deps = CodeAnalyzer.get_class_dependencies(files)
+        deps_lines = []
+        for cls in sorted(deps):
+            targets = sorted(deps[cls])
+            deps_lines.append(f"- **{cls}** → {', '.join(targets) if targets else 'žiadne'}")
+        deps_section = "\n".join(deps_lines)
+
+        # 5) entrypointy
+        entrypoints = []
+        for fname in ("__main__.py", "cli.py", "manage.py"):
+            if os.path.isfile(os.path.join(repo_root, fname)):
+                entrypoints.append(fname)
+        entry_section = ", ".join(entrypoints) or "Žiadne entrypoint skripty"
+
+        # 6) license
+        lic = "Žiadny LICENSE súbor"
+        for f in ("LICENSE", "LICENSE.txt"):
+            path = os.path.join(repo_root, f)
+            if os.path.isfile(path):
+                lic = open(path, encoding="utf-8").read().splitlines()[0]
+                break
+
+        prompt = f"""
+You are an AI assistant for generating a README for a Python project.
+
+## pyproject.toml content:
+{pyproject_content or 'No pyproject.toml found.'}
+
+## File structure
+{file_list}
+
+## Code metrics
+{metrics}
+
+## External dependencies
+{deps_section}
+
+## Entrypoint scripts
+{entry_section}
+
+## License
+{lic}
+
+Based on the information above, generate a README.md in Slovak, formatted in Markdown, with the following sections:
+1) Popis projektu  
+2) Inštalácia  
+3) Použitie  
+4) Štruktúra projektu
+5) Licencia
+"""
+
+        max_out = self._get_allowed_output(prompt)
+        readme = self.groq_client.get_ai_response(prompt, max_tokens=max_out, temperature=0.7)
+
+        target = os.path.join(output_dir, readme_name)
+        with open(target, "w", encoding="utf-8") as f:
+            f.write(readme)
+        logging.info(f"README vygenerovaný: {target}")
