@@ -368,6 +368,8 @@ PROHIBITIONS:
 
         # 2) subory
         file_list = "\n".join(f"- `{os.path.relpath(p, repo_root)}`" for p in sorted(files))
+        if len(file_list) > 100:
+            file_list = file_list[:100]
 
         # 3) kodove metriky
         total_files = len(files)
