@@ -183,9 +183,25 @@ elif page == "🏗️ Architektúra":
     st.title("🏗️ Rozpoznanie architektúry")
     st.write("Analyzujem projekt a identifikujem architektonický vzor…")
 
+    # NOVÉ: ovládacie prvky pre group_levels a max_modules
+    group_levels = st.slider(
+        "Úroveň zoskupenia modulov (adresárové segmenty)",
+        min_value=1, max_value=8, value=1,
+        help="Koľko prvých častí cesty použiť na skupiny modulov"
+    )
+    max_modules = st.number_input(
+        "Maximálny počet modulov na analýzu",
+        min_value=10, max_value=1000, value=300, step=10,
+        help="Horná hranica pre počet skupín modulov"
+    )
+
     if st.button("🔍 Spustiť analýzu architektúry"):
         with st.spinner("Analýza…"):
-            result = arch_recognizer.recognize_architecture_from_metadata(repo_root=st.session_state.repo_root)
+            result = arch_recognizer.recognize_architecture_from_metadata(
+                repo_root=st.session_state.repo_root,
+                group_levels=group_levels,
+                max_modules=max_modules
+            )
             st.session_state.architecture_result = result
 
     # vysledky
