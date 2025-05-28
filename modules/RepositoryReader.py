@@ -7,7 +7,7 @@ from git import Repo
 
 class RepositoryReader:
     """
-    Klonuje Git repozitár, načíta všetky .py súbory a odstráni lokálnu kópiu.
+    Klonuje Git repozitár, načíta všetky .py súbory.
     """
 
     def __init__(self, repo_url: str, clone_dir: str = "./cloned_repo"):

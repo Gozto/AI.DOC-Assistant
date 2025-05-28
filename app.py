@@ -7,13 +7,25 @@ import streamlit as st
 
 from modules.ArchitectureRecognizer import ArchitectureRecognizer
 from modules.CodeAnalyzer import CodeAnalyzer
-from modules.ImportantClassFinder import ImportantClassesFinder
+from modules.ImportantClassFinder import ImportantClassFinder
 from modules.RepositoryReader import RepositoryReader
 from modules.TextDocumentationMaker import TextDocumentationMaker
 from modules.TogetherAiAPIClient import TogetherAPIClient
 from modules.UMLDiagramMaker import UMLDiagramMaker
 
 st.set_page_config(page_title="AI Code Assistant", layout="wide")
+
+# skryjem deploy menu
+st.markdown(
+    """
+    <style>
+    #MainMenu {visibility: hidden;}
+    footer {visibility: hidden;}
+    header {visibility: hidden;}
+    </style>
+    """,
+    unsafe_allow_html=True
+)
 
 for key, default in [("repo_url", ""), ("clone_dir", "./cloned_repo"), ("repo_root", None), ("reader", None),
                      ("output_dir", "./output_dir"), ("architecture_result", None), ("top_classes", None),
@@ -73,7 +85,7 @@ def init_clients():
     ai = TogetherAPIClient()
     doc_maker = TextDocumentationMaker(ai)
     arch_recognizer = ArchitectureRecognizer(reader=reader, ai_client=ai)
-    important_finder = ImportantClassesFinder(together_client=ai, reader=reader)
+    important_finder = ImportantClassFinder(together_client=ai, reader=reader)
     uml_maker = UMLDiagramMaker(together_client=ai, reader=reader,
                                 output_dir=str(Path(st.session_state.output_dir) / "uml_diagrams"),
                                 plantuml_server="http://www.plantuml.com/plantuml", output_format="svg")
@@ -314,7 +326,7 @@ elif page == "📊 UML Diagrams":
 
         img_path = Path(uml_maker.output_dir) / f"method_dependency_{dep_cls}_{dep_meth}.{uml_maker.output_format}"
         if img_path.exists():
-            st.image(str(img_path), caption=f"Dependency diagram: {dep_cls}.{dep_meth} → callers",
+            st.image(str(img_path), caption=f"Dependency diagram: {dep_cls}.{dep_meth}",
                      use_container_width=True)
             st.subheader("PlantUML zdroj – Method Dependency")
             st.code(puml, line_numbers=True)

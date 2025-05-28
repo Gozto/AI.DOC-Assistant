@@ -8,7 +8,7 @@ from modules.TogetherAiAPIClient import TogetherAPIClient
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
 
-class ImportantClassesFinder:
+class ImportantClassFinder:
     """
     Identifikuje top N najdôležitejších tried v Python projekte podľa metrík CodeAnalyzer
     a umožňuje generovať ich detailnú AI analýzu s voliteľným zápisom do Markdown.
@@ -79,7 +79,7 @@ Analyzuj nasledujúcu triedu:
 
 ### Metriky
 - Počet definovaných metód: {len(class_info.get('methods_list', []))}
-- Počet tried, ktoré majú túto triedu vo svojich závislostiach (in-degree): {class_info['dependents']}
+- Počet tried, ktoré závisia od tejto triedy (in-degree): {class_info['dependents']}
 (Hodnota 0 znamená, že žiadna iná trieda v projekte túto triedu nevyužíva, hoci samotná trieda môže závisieť 
 na iných triedach.)
 - Komplexita a veľkosť: (už započítaná v Indexe)
