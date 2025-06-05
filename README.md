@@ -1,4 +1,4 @@
-# AI Code Assistant – Streamlit Web App
+# AI.DOC-Assistant – Streamlit Web App
 
 Tento projekt je súčasťou bakalárskej práce zameranej na **porozumenie softvérového kódu pomocou AI**.  
 Ide o Streamlit webovú aplikáciu, ktorá:
