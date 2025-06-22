@@ -199,34 +199,29 @@ Generate only PlantUML code starting with @startuml and ending with @enduml, not
         Extrahuje definíciu triedy a vzťahy z vygenerovaného PlantUML kódu
         a uloží ich do interných štruktúr.
 
-        1) Nájde blok definície aktuálnej triedy (`class X { ... }`) a uloží ho
-           do `self.class_definitions`.
-        2) Pre každý riadok PlantUML kódu, ktorý nie je definícia triedy alebo iného
-           elementu, rozparsuje zdroj, cieľ a typ šípky.
-        3) Určí typ vzťahu podľa `rel_types` alebo podľa tvaru šípky:
-           - `<|--` -> "inheritance"
-           - `o--` alebo `*--` -> "aggregation"
-           - inak -> "association"
-        4) Pridá štvoricu `(src, arrow, tgt, rel_type)` do `self.relationships`.
+        1) Nájde definíciu aktuálnej triedy a uloží ju.
+        2) Parsuje každý riadok vzťahu.
+        3) Určí typ vzťahu a normalizuje šípku.
+        4) Odstráni invertované duplicity podľa priority.
         """
-
-        # 1)
+        # 1) ulozenie definicie triedy
         class_block = re.search(rf'(class\s+{class_name}\s*\{{[\s\S]*?\}})', plantuml_code)
         if class_block:
             self.class_definitions[class_name] = class_block.group(1)
 
-        # 2)
+        # priority pre merge invertovanych vztahov
+        PRIORITY = {"inheritance": 3, "aggregation": 2, "association": 1}
+
         for line in plantuml_code.splitlines():
             text = line.strip()
             if not text or text.startswith(("class ", "interface ", "enum ")):
                 continue
-
             m = re.match(r"^(\w+)\s+([^\s:]+)\s+(\w+)", text)
             if not m:
                 continue
             src, arrow, tgt = m.groups()
 
-            # 3)
+            # 2) urcime typ vztahu
             rel_type = rel_types.get(tgt)
             if not rel_type:
                 if "<|--" in arrow:
@@ -236,8 +231,33 @@ Generate only PlantUML code starting with @startuml and ending with @enduml, not
                 else:
                     rel_type = "association"
 
-            # 4)
-            self.relationships.add((src, arrow, tgt, rel_type))
+            # 3) Normalizacia sipky podla druhu vztahu
+            if rel_type == "inheritance":
+                arrow = "<|--"
+            elif rel_type == "aggregation":
+                arrow = "o--"
+            else:  # association
+                arrow = "-->"
+
+            # pripravim novy vzyah bez swapovania src/tgt
+            new_rel = (src, arrow, tgt, rel_type)
+
+            # 4) Merge invertovanych vztahov podla priority
+            skip = False
+            for existing in list(self.relationships):
+                src2, arrow2, tgt2, rel2 = existing
+
+                # invertovany vztah (A->B vs B->A)
+                if src2 == new_rel[2] and tgt2 == new_rel[0]:
+
+                    # ostava len vyssia priorita
+                    if PRIORITY[rel_type] > PRIORITY[rel2]:
+                        self.relationships.remove(existing)
+                    else:
+                        skip = True
+                    break
+            if not skip:
+                self.relationships.add(new_rel)
 
     def build_full_diagram(self) -> str:
         """
