@@ -99,7 +99,8 @@ Python Class Code:
             try:
                 result = self.together_client.trim_reponse_to_fit_json(output)
                 project_classes = CodeAnalyzer.get_all_classes_set(files_dict)
-                filtered_result = {key: value for key, value in result.items() if key in project_classes}
+                filtered_result = {key: value for key, value in result.items() if key in project_classes and
+                                   key != class_name}
                 return filtered_result
             except Exception as e:
                 self.logger.error(f"Chyba pri parsovaní JSON: {e}. Opakujem požiadavku...")
@@ -111,17 +112,29 @@ Python Class Code:
         Rozdelí kód celej triedy na segmenty, paralelne ich analyzuje a
         skombinuje zistené vzťahy tejto triedy k ostatným triedam v projekte.
         """
-        segments = CodeAnalyzer.split_class_code_for_diagrams(class_code, max_lines=650)
+        segments = CodeAnalyzer.split_class_code_for_diagrams(class_code, max_lines=2500)
         files_dict = self.reader.read_files()
+
+        PRIORITY = {"inheritance": 3, "aggregation": 2, "association": 1}
+
+        def merge_rel(existing: str, new: str) -> str:
+            return existing if PRIORITY[existing] >= PRIORITY[new] else new
 
         combined: dict[str, str] = {}
         with ThreadPoolExecutor(max_workers=min(5, len(segments))) as pool:
             futures = {pool.submit(self.generate_class_relationships_for_one_segment, seg, files_dict, class_name): seg
                        for seg in segments}
+
             for fut in as_completed(futures):
                 try:
                     result = fut.result()
-                    combined.update(result)
+                    for other_cls, rel_type in result.items():
+                        # ak este neni vztah k tej triede
+                        if other_cls not in combined:
+                            combined[other_cls] = rel_type
+                        else:
+                            # ak su 2 vztahy tak zlucim podla priority
+                            combined[other_cls] = merge_rel(combined[other_cls], rel_type)
                 except Exception as e:
                     self.logger.error(f"Segment failed: {e}")
 

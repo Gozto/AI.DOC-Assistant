@@ -223,7 +223,7 @@ elif page == "🏗️ Architektúra":
     if st.session_state.architecture_result:
         arch = st.session_state.architecture_result.get("architecture")
         just = st.session_state.architecture_result.get("justification")
-        st.subheader("Detekovaný vzor")
+        st.subheader("Detegovaný vzor")
         st.write(f"**{arch}**")
         st.subheader("Zdôvodnenie")
         st.write(just)
