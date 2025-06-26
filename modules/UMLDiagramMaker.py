@@ -19,7 +19,7 @@ class UMLDiagramMaker:
     def __init__(self, together_client: TogetherAPIClient, reader: RepositoryReader,
                  output_dir: str = "../../uml_diagrams", plantuml_server: str = "http://www.plantuml.com/plantuml",
                  output_format: str = "svg", debug: bool = False, token_counter=CodeAnalyzer.default_token_counter,
-                 max_tokens_per_prompt: int = 28000, max_output_tokens: int = 3500) -> None:
+                 max_tokens_per_prompt: int = 25000, max_output_tokens: int = 3500) -> None:
 
         """
         Inicializuje nástroj pre generovanie UML diagramov.
@@ -112,7 +112,7 @@ Python Class Code:
         Rozdelí kód celej triedy na segmenty, paralelne ich analyzuje a
         skombinuje zistené vzťahy tejto triedy k ostatným triedam v projekte.
         """
-        segments = CodeAnalyzer.split_class_code_for_diagrams(class_code, max_lines=2500)
+        segments = CodeAnalyzer.split_class_code_for_diagrams(class_code, max_lines=1500)
         files_dict = self.reader.read_files()
 
         PRIORITY = {"inheritance": 3, "aggregation": 2, "association": 1}

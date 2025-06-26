@@ -21,7 +21,7 @@ class TogetherAPIClient:
     """
 
     def __init__(self, together_key_file: str = os.path.join(os.path.dirname(__file__), 'togetherai_key.txt'),
-                 model: str = "Qwen/Qwen2.5-Coder-32B-Instruct"):
+                 model: str = "arcee-ai/coder-large"):
         """
         Inicializuje Together AI klienta.
         Načíta API kľúč zo súboru a nastaví model pre volania Together AI.
